@@ -32,7 +32,6 @@ GDPR-ready solution for organizations handling sensitive technical data
 
 ## Technical Implementation  
 ```
-graph TD
     A[User Query] --> B[AI Chatbot]
     B --> C{Knowledge Base}
     C --> D[Technical Manuals]
