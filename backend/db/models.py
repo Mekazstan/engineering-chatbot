@@ -44,7 +44,7 @@ class User(Base):
     user_id = Column(Integer, primary_key=True)
     name = Column(String(100), nullable=True)
     email = Column(String(255), unique=True, nullable=False)
-    password_hash = Column(String(255), nullable=False)
+    password_hash = Column(String(255), nullable=True)
     company = Column(String(100))
     job_title = Column(String(100))
     phone = Column(String(20))

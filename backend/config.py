@@ -14,6 +14,9 @@ class Settings(BaseSettings):
     MONGO_PASSWORD: str
     MONGO_CLUSTER: str
     MONGO_DB_NAME: str
+    JWT_SECRET_KEY: str
+    JWT_ALGORITHM: str
+    GOOGLE_CLIENT_ID: str
     
     @property
     def MONGO_URI(self) -> str:

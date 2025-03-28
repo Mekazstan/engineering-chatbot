@@ -1,13 +1,14 @@
 import logging
+import requests
 from fastapi import (APIRouter, status, Depends, 
                      HTTPException, BackgroundTasks)
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
 from service import AuthService
-from schema import (UserCreate, UserLogin, 
+from schema import (UserCreate, UserLogin, UserGoogleAuth,
                     PasswordResetRequest, PasswordResetConfirm)
 from db.main import get_session
-from db.models import User
+from db.models import User, UserPlan, EmailPreferences, UserStatus
 from config import Config
 from dependencies import (RefreshTokenBearer, get_current_user, 
                           RoleChecker, AccessTokenBearer)
@@ -17,9 +18,12 @@ from mail import create_message, mail
 from .utils import (create_url_safe_token, decode_url_safe_token, verify_password, 
                     create_access_tokens, generate_password_hash)
 from datetime import timedelta, datetime
+from google.oauth2 import id_token
 
-REFRESH_TOKEN_EXPIRY = 5
+REFRESH_TOKEN_EXPIRY = 7
 ACCESS_TOKEN_EXPIRY = 1
+
+GOOGLE_CLIENT_ID = Config.GOOGLE_CLIENT_ID
 
 auth_router = APIRouter()
 auth_service = AuthService()
@@ -44,8 +48,18 @@ async def signup(
                 detail=f"User with email {email} already exists.",
             )
         new_user = await auth_service.create_user(user_data, session)
+        # Create default email preferences
+        email_prefs = EmailPreferences(
+            user_id=new_user.user_id,
+            updates=True,
+            tips=True,
+            security=True,
+            newsletter=False,
+        )
+        session.add(email_prefs)
+        session.commit()
         return {
-            "message": "Account Created! Check email to verify your account",
+            "message": "Account Created!",
             "user": new_user,
         }
     except Exception as e:
@@ -66,6 +80,16 @@ async def login(
             password_valid = verify_password(password, user.password_hash)
 
             if password_valid:
+                if user.status == UserStatus.BANNED:
+                    # Check if user is banned
+                    raise HTTPException(
+                        status_code=status.HTTP_403_FORBIDDEN,
+                        detail="Your account has been suspended. Please contact support.",
+                    )
+                else:
+                    # Update user's last login time
+                    user.updated_at = datetime.utcnow()
+                    session.commit()
                 access_token = create_access_tokens(
                     user_data={
                         "email": user.email,
@@ -104,50 +128,101 @@ async def login(
     finally:
         await session.close()
 
-# @auth_router.post("/google", status_code=status.HTTP_200_OK)
-# async def google(id_token: str, session: AsyncSession = Depends(get_session)):
-#     try:
-#         decoded_token = auth.verify_id_token(id_token)
-#         uid = decoded_token['uid']
-#         email = decoded_token['email']
-#         name = decoded_token.get('name')
-#         picture = decoded_token.get('picture')
+# Google Sign-In endpoint
+@auth_router.post("/api/auth/google")
+async def google_signin(google_token: UserGoogleAuth, session: AsyncSession = Depends(get_session)):
+    try:
+        # Verify the Google token
+        idinfo = id_token.verify_oauth2_token(
+            google_token.token, requests.Request(), GOOGLE_CLIENT_ID
+        )
 
-#         user = await user_service.get_user_by_email(email, session)
+        # Extract user information from the token
+        email = idinfo.get("email")
+        if not email:
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email not found in Google token",
+            )
 
-#         if not user:
-#             new_user_data = {
-#                 "email": email,
-#                 "username": name,
-#                 "avatar_url": picture,
-#                 "password_hash": "firebase_user",
-#                 "is_verified": True,
-#                 "firebase_uid": uid,
-#             }
-#             user = await user_service.create_user(User(**new_user_data), session)
+        # Check if the email is verified
+        if not idinfo.get("email_verified", False):
+            raise HTTPException(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                detail="Email not verified with Google",
+            )
 
-#         access_token = create_access_tokens(
-#             user_data={"email": user.email, "user_uid": str(user.id), "role": user.role}
-#         )
-#         refresh_token = create_access_tokens(
-#             user_data={"email": user.email, "user_uid": str(user.id)},
-#             refresh=True,
-#             expiry=timedelta(days=REFRESH_TOKEN_EXPIRY),
-#         )
-#         return JSONResponse(
-#             content={
-#                 "message": "Login Successful",
-#                 "access token": access_token,
-#                 "refresh token": refresh_token,
-#                 "user": {"email": user.email, "uid": str(user.id), "username": user.username},
-#             }
-#         )
-#     except auth.InvalidIdTokenError:
-#         raise HTTPException(status_code=401, detail="Invalid ID token")
-#     except Exception as e:
-#         raise HTTPException(status_code=500, detail=f"Firebase login failed: {e}")
-#     finally:
-#         await session.close()
+        # Get user information
+        name = idinfo.get("name", "")
+        picture = idinfo.get("picture", "")
+
+        # Check if user exists in database
+        user = session.query(User).filter(User.email == email).first()
+
+        if not user:
+            # Create new user if not exists
+            user = User(
+                email=email,
+                name=name,
+                avatar_url=picture,
+                plan=UserPlan.FREE,
+                status="active",
+                role="user",
+                created_at=datetime.utcnow(),
+                updated_at=datetime.utcnow(),
+            )
+            session.add(user)
+            session.commit()
+            session.refresh(user)
+
+            # Create default email preferences
+            email_prefs = EmailPreferences(
+                user_id=user.user_id,
+                updates=True,
+                tips=True,
+                security=True,
+                newsletter=False,
+            )
+            session.add(email_prefs)
+            session.commit()
+        elif user.status == "banned":
+            # Check if user is banned
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Your account has been suspended. Please contact support.",
+            )
+        else:
+            # Update user's last login time
+            user.updated_at = datetime.utcnow()
+            session.commit()
+
+        # Create access token
+        access_token_expires =timedelta(days=ACCESS_TOKEN_EXPIRY)
+        access_token = create_access_tokens(
+            data={"sub": str(user.user_id)}, expires_delta=access_token_expires
+        )
+
+        # Return user information and token
+        return {
+            "user_id": str(user.user_id),
+            "name": user.name,
+            "email": user.email,
+            "token": access_token,
+            "plan": user.plan,
+        }
+
+    except ValueError:
+        # Invalid token
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid Google token",
+        )
+    except Exception as e:
+        # Other errors
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error processing Google sign-in: {str(e)}",
+        )
 
 @auth_router.post("/reset-password/request")
 async def password_reset_request(email_data: PasswordResetRequest, background_tasks: BackgroundTasks):
