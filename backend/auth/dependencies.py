@@ -3,7 +3,7 @@ from fastapi.security import HTTPBearer
 from fastapi.exceptions import HTTPException
 from fastapi.security.http import HTTPAuthorizationCredentials
 from sqlalchemy.ext.asyncio import AsyncSession
-from src.db.mongo import token_in_blocklist
+from db.mongo import token_in_blocklist
 from db.main import get_session
 from db.models import User
 from .utils import decode_token

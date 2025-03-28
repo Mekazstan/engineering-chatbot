@@ -4,13 +4,13 @@ from fastapi import (APIRouter, status, Depends,
                      HTTPException, BackgroundTasks)
 from fastapi.responses import JSONResponse
 from sqlalchemy.ext.asyncio import AsyncSession
-from service import AuthService
-from schema import (UserCreate, UserLogin, UserGoogleAuth,
+from .service import AuthService
+from .schema import (UserCreate, UserLogin, UserGoogleAuth,
                     PasswordResetRequest, PasswordResetConfirm)
 from db.main import get_session
 from db.models import User, UserPlan, EmailPreferences, UserStatus
 from config import Config
-from dependencies import (RefreshTokenBearer, get_current_user, 
+from .dependencies import (RefreshTokenBearer, get_current_user, 
                           RoleChecker, AccessTokenBearer)
 from db.mongo import add_jti_to_blocklist
 from user.service import UserService

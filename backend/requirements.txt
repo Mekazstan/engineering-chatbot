@@ -12,4 +12,5 @@ pydantic-settings
 pytest
 pyjwt
 python-multipart
+requests
 sqlalchemy
