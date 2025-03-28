@@ -1,7 +1,27 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
+from urllib.parse import quote_plus
 
 class Settings(BaseSettings):
     DATABASE_URL: str
+    DOMAIN: str
+    MAIL_USERNAME: str
+    MAIL_PASSWORD: str
+    MAIL_FROM: str
+    MAIL_PORT: int
+    MAIL_SERVER: str
+    MAIL_FROM_NAME: str
+    MONGO_USERNAME: str
+    MONGO_PASSWORD: str
+    MONGO_CLUSTER: str
+    MONGO_DB_NAME: str
+    
+    @property
+    def MONGO_URI(self) -> str:
+        escaped_username = quote_plus(self.MONGO_USERNAME)
+        escaped_password = quote_plus(self.MONGO_PASSWORD)
+        return (
+            f"mongodb+srv://{escaped_username}:{escaped_password}@{self.MONGO_CLUSTER}.dwm7ggh.mongodb.net/?retryWrites=true&w=majority&appName={self.MONGO_CLUSTER}"
+        )
 
     model_config = SettingsConfigDict(
         env_file=".env",

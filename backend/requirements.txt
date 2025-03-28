@@ -1,8 +1,14 @@
 asyncpg
+authlib
 celery
 fastapi
+fastapi-mail
 fastapi[standard]
+itsdangerous
+motor
+passlib[bcrypt]
 pydantic
 pydantic-settings
+pytest
+pyjwt
 sqlalchemy
-

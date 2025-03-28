@@ -7,11 +7,13 @@ from chat.routes import chat_router
 from docs_management.routes import docs_router
 from user.routes import user_router
 from db.main import init_db
+from db.mongo import initialize_blocklist
 
 @asynccontextmanager 
 async def life_span(app:FastAPI):
     print(f"Server is starting...")
     await init_db()
+    await initialize_blocklist()
     yield
     print(f"Server has been stopped")
 

@@ -33,19 +33,23 @@ class InvoiceStatus(str, Enum):
     OPEN = "open"
     PAID = "paid"
     VOID = "void"
+    
+class UserPlan(str, Enum):
+    FREE = "free"
+    PRO = "pro"
 
 class User(Base):
     __tablename__ = "users"
     
     user_id = Column(Integer, primary_key=True)
-    name = Column(String(100), nullable=False)
+    name = Column(String(100), nullable=True)
     email = Column(String(255), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=False)
     company = Column(String(100))
     job_title = Column(String(100))
     phone = Column(String(20))
     avatar_url = Column(String(255))
-    plan = Column(String(50))
+    plan = Column(SQLEnum(UserPlan), default=UserPlan.FREE)
     plan_renewal_date = Column(DateTime)
     api_key = Column(String(100), unique=True)
     role = Column(SQLEnum(UserRole), default=UserRole.USER)
