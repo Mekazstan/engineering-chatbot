@@ -11,7 +11,7 @@ Base = declarative_base()
 # Create the async engine
 engine = create_async_engine(
     DATABASE_URL,
-    echo=False,
+    echo=True,
     future=True,
     pool_size=20,
     max_overflow=20,
@@ -27,6 +27,7 @@ async_session = sessionmaker(
 
 # Start DB engine
 async def init_db():
+    from . import models
     async with engine.begin() as conn:
         
         # Scans for any Base models & creates them

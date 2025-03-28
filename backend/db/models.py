@@ -4,7 +4,7 @@ from sqlalchemy import (Column, String, Integer, ForeignKey, DateTime, Boolean, 
     Enum as SQLEnum, Text
 )
 from sqlalchemy.orm import relationship
-from main import Base
+from .main import Base
 
 
 # Enums for status fields
