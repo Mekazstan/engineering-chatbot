@@ -14,7 +14,7 @@ from .dependencies import (RefreshTokenBearer, get_current_user,
                           RoleChecker, AccessTokenBearer)
 from db.mongo import add_jti_to_blocklist
 from user.service import UserService
-from mail import create_message, mail
+from mail import send_mailgun_email
 from .utils import (create_url_safe_token, decode_url_safe_token, verify_password, 
                     create_access_tokens, generate_password_hash)
 from datetime import timedelta, datetime
@@ -30,9 +30,6 @@ auth_service = AuthService()
 user_service = UserService()
 
 role_checker = RoleChecker(["admin", "user"])
-
-async def send_email(message):
-    await mail.send_message(message)
 
 @auth_router.post("/signup", status_code=status.HTTP_201_CREATED)
 async def signup(
@@ -228,25 +225,56 @@ async def google_signin(google_token: UserGoogleAuth, session: AsyncSession = De
 async def password_reset_request(email_data: PasswordResetRequest, background_tasks: BackgroundTasks):
     email = email_data.email
 
+    # Generate token and link
     token = create_url_safe_token({"email": email})
+    link = f"https://{Config.DOMAIN}/auth/reset-password/confirm/{token}"
 
-    link = f"http://{Config.DOMAIN}/api/v1/auth/password-reset-confirm/{token}"
-
+    # Create HTML content
     html_message = f"""
-    <h1>Reset Your Password</h1>
-    <p>Please click this <a href="{link}">link</a> to Reset Your Password</p>
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <style>
+            .button {{
+                background-color: #4CAF50;
+                border: none;
+                color: white;
+                padding: 15px 32px;
+                text-align: center;
+                text-decoration: none;
+                display: inline-block;
+                font-size: 16px;
+                margin: 20px 0;
+                cursor: pointer;
+                border-radius: 4px;
+            }}
+        </style>
+    </head>
+    <body>
+        <h1>Password Reset Request</h1>
+        <p>Hello from Engineering Support AI Chatbot!</p>
+        <p>We received a request to reset your password. Click the button below to proceed:</p>
+        <a href="{link}" class="button">Reset Password</a>
+        <p>If you didn't request this, please ignore this email.</p>
+        <p>The link will expire in 24 hours.</p>
+    </body>
+    </html>
     """
-    subject = "Reset Your Password"
 
-    message = create_message(recipients=[email], subject=subject, body=html_message)
-
-    background_tasks.add_task(send_email, message)
+    # Queue email sending
+    background_tasks.add_task(
+        send_mailgun_email,
+        recipients=[email],
+        subject="Password Reset Instructions",
+        html=html_message
+    )
 
     return JSONResponse(
         content={
-            "message": "Please check your email for instructions to reset your password",
+            "message": "Password reset instructions sent to your email",
+            "status": "success"
         },
-        status_code=status.HTTP_200_OK,
+        status_code=status.HTTP_200_OK
     )
 
 

@@ -1,34 +1,33 @@
-from fastapi_mail import FastMail, ConnectionConfig, MessageSchema
+import os
+import httpx
 from config import Config
-from pathlib import Path
 
-BASE_DIR = Path(__file__).resolve().parent
+# Mailgun Configuration
+MAILGUN_API_KEY = Config.MAILGUN_API_KEY
+MAILGUN_DOMAIN = Config.MAILGUN_DOMAIN
+FROM_EMAIL = f"Engineering Support <no-reply@{MAILGUN_DOMAIN}>"
 
-
-mail_config = ConnectionConfig(
-    MAIL_USERNAME=Config.MAIL_USERNAME,
-    MAIL_PASSWORD=Config.MAIL_PASSWORD,
-    MAIL_FROM=Config.MAIL_FROM,
-    MAIL_PORT=Config.MAIL_PORT,
-    MAIL_SERVER=Config.MAIL_SERVER,
-    MAIL_FROM_NAME=Config.MAIL_FROM_NAME,
-    MAIL_STARTTLS=True,
-    MAIL_SSL_TLS=False,
-    USE_CREDENTIALS=True,
-    VALIDATE_CERTS=True,
-)
-
-
-mail = FastMail(config=mail_config)
-
-
-def create_message(recipients: list[str], subject: str, body: str):
-
-    message = MessageSchema(
-        recipients=recipients,
-        subject=subject,
-        body=body,
-        subtype="html"
-    )
-
-    return message
+async def send_mailgun_email(recipients: list[str], subject: str, html: str):
+    """Send email using Mailgun API"""
+    async with httpx.AsyncClient() as client:
+        try:
+            response = await client.post(
+                f"https://api.mailgun.net/v3/{MAILGUN_DOMAIN}/messages",
+                auth=("api", MAILGUN_API_KEY),
+                data={
+                    "from": FROM_EMAIL,
+                    "to": recipients,
+                    "subject": subject,
+                    "html": html
+                },
+                timeout=10.0
+            )
+            response.raise_for_status()
+            return True
+        except httpx.HTTPStatusError as e:
+            print(f"Mailgun API error: {e.response.text}")
+            return False
+        except Exception as e:
+            print(f"Error sending email: {str(e)}")
+            return False
+        

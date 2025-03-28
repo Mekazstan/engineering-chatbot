@@ -4,12 +4,6 @@ from urllib.parse import quote_plus
 class Settings(BaseSettings):
     DATABASE_URL: str
     DOMAIN: str
-    MAIL_USERNAME: str
-    MAIL_PASSWORD: str
-    MAIL_FROM: str
-    MAIL_PORT: int
-    MAIL_SERVER: str
-    MAIL_FROM_NAME: str
     MONGO_USERNAME: str
     MONGO_PASSWORD: str
     MONGO_CLUSTER: str
@@ -17,6 +11,8 @@ class Settings(BaseSettings):
     JWT_SECRET_KEY: str
     JWT_ALGORITHM: str
     GOOGLE_CLIENT_ID: str
+    MAILGUN_API_KEY: str
+    MAILGUN_DOMAIN: str
     
     @property
     def MONGO_URI(self) -> str:

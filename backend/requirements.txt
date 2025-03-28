@@ -1,6 +1,7 @@
 asyncpg
-google-auth
 celery
+google-auth
+httpx
 fastapi
 fastapi-mail
 fastapi[standard]
