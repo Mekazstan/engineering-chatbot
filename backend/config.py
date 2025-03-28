@@ -13,6 +13,10 @@ class Settings(BaseSettings):
     GOOGLE_CLIENT_ID: str
     MAILGUN_API_KEY: str
     MAILGUN_DOMAIN: str
+    B2_ENDPOINT_URL: str
+    B2_APPLICATION_KEY_ID: str
+    B2_APPLICATION_KEY: str
+    B2_BUCKET_NAME: str
     
     @property
     def MONGO_URI(self) -> str:

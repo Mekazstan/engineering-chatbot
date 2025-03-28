@@ -34,3 +34,6 @@ class DocumentStatusResponse(BaseModel):
     status: DocumentStatus
     progress: Optional[int] = Field(None, ge=0, le=100)
     message: Optional[str] = None
+    
+class DocumentContentResponse(DocumentResponse):
+    content_preview: Optional[str] = None
