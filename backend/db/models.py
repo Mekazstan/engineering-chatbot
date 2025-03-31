@@ -5,6 +5,7 @@ from sqlalchemy import (Column, String, Integer, ForeignKey, DateTime, Boolean, 
 )
 from sqlalchemy.orm import relationship
 from .main import Base
+import uuid
 
 
 # Enums for status fields
@@ -41,7 +42,7 @@ class UserPlan(str, Enum):
 class User(Base):
     __tablename__ = "users"
     
-    user_id = Column(Integer, primary_key=True)
+    user_id = Column(Integer, primary_key=True, default=uuid.uuid4)
     name = Column(String(100), nullable=True)
     email = Column(String(255), unique=True, nullable=False)
     password_hash = Column(String(255), nullable=True)
@@ -67,7 +68,7 @@ class User(Base):
 class Document(Base):
     __tablename__ = "documents"
     
-    document_id = Column(Integer, primary_key=True)
+    document_id = Column(Integer, primary_key=True, default=uuid.uuid4)
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
     name = Column(String(255), nullable=False)
     size = Column(Integer)  # in bytes
@@ -85,7 +86,7 @@ class Document(Base):
 class Conversation(Base):
     __tablename__ = "conversations"
     
-    conversation_id = Column(Integer, primary_key=True)
+    conversation_id = Column(Integer, primary_key=True, default=uuid.uuid4, default=uuid.uuid4)
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)
@@ -97,7 +98,7 @@ class Conversation(Base):
 class Message(Base):
     __tablename__ = "messages"
     
-    message_id = Column(Integer, primary_key=True)
+    message_id = Column(Integer, primary_key=True, default=uuid.uuid4)
     conversation_id = Column(Integer, ForeignKey("conversations.conversation_id"), nullable=False)
     role = Column(String(20))  # user/assistant
     content = Column(Text, nullable=False)
@@ -111,7 +112,7 @@ class Message(Base):
 class MessageSources(Base):
     __tablename__ = "message_sources"
     
-    source_id = Column(Integer, primary_key=True)
+    source_id = Column(Integer, primary_key=True, default=uuid.uuid4)
     message_id = Column(Integer, ForeignKey("messages.message_id"), nullable=False)
     document_id = Column(Integer, ForeignKey("documents.document_id"), nullable=False)
     page = Column(Integer)
@@ -137,7 +138,7 @@ class EmailPreferences(Base):
 class Subscription(Base):
     __tablename__ = "subscriptions"
     
-    subscription_id = Column(Integer, primary_key=True)
+    subscription_id = Column(Integer, primary_key=True, default=uuid.uuid4)
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
     plan = Column(String(50), nullable=False)
     status = Column(SQLEnum(SubscriptionStatus), nullable=False)
@@ -151,7 +152,7 @@ class Subscription(Base):
 class Invoice(Base):
     __tablename__ = "invoices"
     
-    invoice_id = Column(Integer, primary_key=True)
+    invoice_id = Column(Integer, primary_key=True, default=uuid.uuid4)
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
     amount = Column(Integer, nullable=False)  # in cents
     currency = Column(String(3), default="USD")

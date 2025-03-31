@@ -1,4 +1,5 @@
 asyncpg
+boto3
 celery
 google-auth
 httpx

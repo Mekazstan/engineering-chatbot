@@ -10,7 +10,7 @@ from .schema import (DocumentResponse, DocumentListResponse,
     DocumentStatusResponse, DocumentContentResponse
 )
 from db.main import get_session
-from db.models import User
+from db.models import User, DocumentStatus
 from auth.dependencies import get_current_user
 import logging
 
@@ -74,7 +74,7 @@ async def get_task_status(
 
 @docs_router.get("/all", response_model=DocumentListResponse)
 async def get_documents(
-    status: Optional[str] = Query(None),
+    status: Optional[DocumentStatus] = Query(None),
     limit: int = Query(50, gt=0),
     offset: int = Query(0, ge=0),
     current_user: User = Depends(get_current_user),
@@ -97,14 +97,16 @@ async def get_documents(
                     "name": doc.name,
                     "size": doc.size,
                     "upload_date": doc.upload_date,
-                    "status": doc.status,
+                    "status": doc.status.value,
                     "url": doc.s3_url
                 }
                 for doc in documents
             ],
-            "total": total,
-            "limit": limit,
-            "offset": offset
+            "pagination": {
+                "total": total,
+                "limit": limit,
+                "offset": offset
+            }
         }
         
     except Exception as e:

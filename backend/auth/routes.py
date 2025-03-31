@@ -86,7 +86,7 @@ async def login(
                 else:
                     # Update user's last login time
                     user.updated_at = datetime.utcnow()
-                    session.commit()
+                    await session.commit()
                 access_token = create_access_tokens(
                     user_data={
                         "email": user.email,

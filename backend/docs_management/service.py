@@ -9,9 +9,11 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.future import select
 from sqlalchemy import func, update
 from db.models import Document, DocumentStatus
+import urllib.parse
 import boto3
 from botocore.exceptions import ClientError
 from config import Config
+from botocore.client import Config as BotoConfig
 
 processing_tasks: Dict[str, Dict[str, int]] = {}
 
@@ -22,7 +24,20 @@ class DocumentService:
             's3',
             endpoint_url=Config.B2_ENDPOINT_URL,
             aws_access_key_id=Config.B2_APPLICATION_KEY_ID,
-            aws_secret_access_key=Config.B2_APPLICATION_KEY
+            aws_secret_access_key=Config.B2_APPLICATION_KEY,
+            config=BotoConfig(
+                signature_version='s3v4',
+                s3={
+                    'addressing_style': 'path',
+                    'payload_signing_enabled': False,
+                    'disable_content_md5': True
+                },
+                connect_timeout=30,
+                read_timeout=30,
+                parameter_validation=False,
+                inject_host_prefix=False,
+                user_agent_extra=''
+            )
         )
         self.bucket_name = Config.B2_BUCKET_NAME
         self.processing_tasks = processing_tasks
@@ -39,11 +54,11 @@ class DocumentService:
         """Handle document upload to Backblaze B2 and processing initiation"""
         try:
             # Generate unique file path
-            file_path = f"user_{user_id}/{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{filename}"
-            
+            safe_filename = urllib.parse.quote(filename)
+            file_path = f"user_{user_id}/{datetime.utcnow().strftime('%Y%m%d_%H%M%S')}_{safe_filename}"
             # Upload to Backblaze B2
             b2_url = await self._upload_to_b2(file_data, file_path, file_type)
-            
+            print(f"B2 URL: {b2_url}")
             # Create document record
             document = Document(
                 user_id=user_id,
@@ -79,13 +94,17 @@ class DocumentService:
     async def _upload_to_b2(self, file_data: bytes, file_path: str, content_type: str) -> str:
         """Upload file to Backblaze B2 and return public URL"""
         try:
+            if not content_type or content_type.lower() == 'auto':
+                content_type = 'b2/x-auto'
+            
+            # Remove unsupported parameters and add B2-specific headers
             self.b2.put_object(
                 Bucket=self.bucket_name,
                 Key=file_path,
                 Body=file_data,
-                ContentType=content_type
+                ContentType=content_type,
             )
-            
+            print(f"Here i am 2...")
             # Return public URL (Backblaze B2 format)
             return f"{self.b2.meta.endpoint_url}/{self.bucket_name}/{file_path}"
             
@@ -109,7 +128,6 @@ class DocumentService:
             logging.error(f"B2 deletion failed: {str(e)}")
             return False
 
-    # Modified delete_document to use B2
     async def delete_document(
         self,
         document_id: int,
@@ -138,7 +156,6 @@ class DocumentService:
             await session.rollback()
             raise
 
-    # The following methods remain unchanged as they don't interact with storage
     async def get_user_documents(
         self,
         user_id: int,
