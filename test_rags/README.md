@@ -4,7 +4,7 @@
 - Finally, connect api endpoint to a frontend (If needed)
 
 ## RAG Agent Implementation Steps
-- Collect manuals / schematics / troubleshooting guides
+- Collect manuals / schematics / troubleshooting guides _/_/_/
 - Pass into RAG workflow
     - Chunk documents
     - Embed Chunks
