@@ -86,7 +86,7 @@ class Document(Base):
 class Conversation(Base):
     __tablename__ = "conversations"
     
-    conversation_id = Column(Integer, primary_key=True, default=uuid.uuid4, default=uuid.uuid4)
+    conversation_id = Column(Integer, primary_key=True, default=uuid.uuid4)
     user_id = Column(Integer, ForeignKey("users.user_id"), nullable=False)
     created_at = Column(DateTime, default=datetime.utcnow)
     updated_at = Column(DateTime, default=datetime.utcnow, onupdate=datetime.utcnow)

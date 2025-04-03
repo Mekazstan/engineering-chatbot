@@ -106,5 +106,10 @@ GDPR-ready solution for organizations handling sensitive technical data
     docker-compose up -d
     ```
 
+## Limitations 
+- Currently only processes PDF files
+
+## Strengths
+- Async programming & concurrent processing
 
 ### Note: This is a modular MVP designed for enterprises needing full control over their AI support tools.
