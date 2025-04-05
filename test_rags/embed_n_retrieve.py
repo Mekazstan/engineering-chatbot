@@ -1,7 +1,6 @@
-import asyncio
 import numpy as np
 import os
-import aiohttp
+import requests
 from dotenv import load_dotenv
 from pinecone import Pinecone
 from langchain_pinecone import PineconeVectorStore
@@ -20,9 +19,9 @@ embeddings_model = CohereEmbeddings(
     max_retries=3,
 )
 
-async def embed_query_cohere(query: str, session: aiohttp.ClientSession) -> np.ndarray:
+def embed_query_cohere(query: str) -> np.ndarray:
     try:
-        async with session.post(
+        response = requests.post(
             "https://api.cohere.ai/v1/embed",
             headers={
                 "Authorization": f"Bearer {COHERE_API_KEY}",
@@ -34,14 +33,18 @@ async def embed_query_cohere(query: str, session: aiohttp.ClientSession) -> np.n
                 "input_type": "search_query",
                 "truncate": "END"
             }
-        ) as response:
-            data = await response.json()
-            return np.array(data['embeddings'][0])
-    except Exception as e:
+        )
+        response.raise_for_status()
+        data = response.json()
+        return np.array(data['embeddings'][0])
+    except requests.exceptions.RequestException as e:
         print(f"Embedding error: {str(e)}")
         return np.zeros(1024)
+    except KeyError as e:
+        print(f"Embedding response format error: {str(e)}")
+        return np.zeros(1024)
 
-async def retrieve_relevant_documents(query: str, top_k: int = 4) -> List[str]:
+def retrieve_relevant_documents(query: str, top_k: int = 4) -> List[str]:
     """
     Retrieves relevant documents from Pinecone based on a query.
 
@@ -60,15 +63,13 @@ async def retrieve_relevant_documents(query: str, top_k: int = 4) -> List[str]:
 
     return [doc.page_content for doc in retrieved_docs]
 
-async def main_retriever(query_text: str):
+def main_retriever(query_text: str):
     """
     Example usage of the retrieve_relevant_documents function.
     """
-    relevant_docs = await retrieve_relevant_documents(query_text)
-    for doc in relevant_docs:
-        print(doc)
-        print("---")
+    relevant_docs = retrieve_relevant_documents(query_text)
+    return relevant_docs
 
 if __name__ == "__main__":
-    query_text = "What was said about 'Creating Data Backup Discs'?"
-    asyncio.run(main_retriever(query_text))
+    query_text = "What was said about 'Turning Off Your PC'?"
+    main_retriever(query_text)
