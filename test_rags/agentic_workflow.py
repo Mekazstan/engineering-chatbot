@@ -89,7 +89,7 @@ def retrieval_node(state: State, config: RunnableConfig):
     )
     return {"messages": [response], "answer": response.content}
 
-def naive_node(state: State, config: RunnableConfig):
+def chatbot_node(state: State, config: RunnableConfig):
     user_query = None
     # Find the last human message (original query)
     for msg in reversed(state["messages"]):
@@ -109,6 +109,7 @@ def naive_node(state: State, config: RunnableConfig):
         {context}
         
         Please answer this question: {user_query}
+        However, if there's no search result just response & engage in a conversation like a fun chatbot.
         """
     else:
         augmented_query = user_query
@@ -158,22 +159,18 @@ def tool_node(state: State):
     }
 
 # Define the routing logic
-def select_node(state: State) -> Literal["retrieval_node", "naive_node", "generate_tool_calls"]:
+def select_node(state: State) -> Literal["retrieval_node", "chatbot_node", "generate_tool_calls"]:
     dest = state["destination"]["destination"]
     if dest == "retrieval":
         return "retrieval_node"
     elif dest == "naive":
-        return "naive_node"
+        return "chatbot_node"
     return "generate_tool_calls"
-
-# Define where to go after tool execution
-def route_after_tools(state: State) -> Literal["naive_node", END]:
-    return "naive_node"
 
 # Build the graph
 graph_builder.add_node("decide_retrieval", decide_retrieval)
 graph_builder.add_node("retrieval_node", retrieval_node)
-graph_builder.add_node("naive_node", naive_node)
+graph_builder.add_node("chatbot_node", chatbot_node)
 graph_builder.add_node("generate_tool_calls", generate_tool_calls)
 graph_builder.add_node("tools", tool_node)
 
@@ -184,12 +181,9 @@ graph_builder.add_conditional_edges(
     select_node
 )
 graph_builder.add_edge("generate_tool_calls", "tools")
-graph_builder.add_conditional_edges(
-    "tools",
-    route_after_tools
-)
+graph_builder.add_edge("tools", "chatbot_node")
 graph_builder.add_edge("retrieval_node", END)
-graph_builder.add_edge("naive_node", END)
+graph_builder.add_edge("chatbot_node", END)
 
 # Compile the graph
 graph = graph_builder.compile(checkpointer=memory)
