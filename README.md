@@ -1,5 +1,8 @@
 # Engineering Support AI Chatbot  
 
+![Screen Shot 2025-04-08 at 13 29 18](https://github.com/user-attachments/assets/563adbb2-ebe9-475d-a471-e2908492d0e3)
+
+
 ## Overview  
 The **Engineering Support AI Chatbot** is a custom-built, self-hosted chatbot designed to assist field engineers with real-time technical support. It leverages AI-powered natural language processing (NLP) to provide accurate, context-aware answers based on an organization's internal documentation.
 
